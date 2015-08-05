@@ -14,9 +14,9 @@
             buildForAnalyzing = "YES">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "B04CC80D1B63BCC700AA2372"
-               BuildableName = "OSQLite"
-               BlueprintName = "OSQLite"
+               BlueprintIdentifier = "B04CC8401B71A6A200AA2372"
+               BuildableName = "OSQLite.Performance"
+               BlueprintName = "OSQLite.Performance"
                ReferencedContainer = "container:OSQLite.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
@@ -32,9 +32,9 @@
       <MacroExpansion>
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "B04CC80D1B63BCC700AA2372"
-            BuildableName = "OSQLite"
-            BlueprintName = "OSQLite"
+            BlueprintIdentifier = "B04CC8401B71A6A200AA2372"
+            BuildableName = "OSQLite.Performance"
+            BlueprintName = "OSQLite.Performance"
             ReferencedContainer = "container:OSQLite.xcodeproj">
          </BuildableReference>
       </MacroExpansion>
@@ -52,9 +52,9 @@
          runnableDebuggingMode = "0">
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "B04CC80D1B63BCC700AA2372"
-            BuildableName = "OSQLite"
-            BlueprintName = "OSQLite"
+            BlueprintIdentifier = "B04CC8401B71A6A200AA2372"
+            BuildableName = "OSQLite.Performance"
+            BlueprintName = "OSQLite.Performance"
             ReferencedContainer = "container:OSQLite.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
@@ -71,9 +71,9 @@
          runnableDebuggingMode = "0">
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "B04CC80D1B63BCC700AA2372"
-            BuildableName = "OSQLite"
-            BlueprintName = "OSQLite"
+            BlueprintIdentifier = "B04CC8401B71A6A200AA2372"
+            BuildableName = "OSQLite.Performance"
+            BlueprintName = "OSQLite.Performance"
             ReferencedContainer = "container:OSQLite.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>

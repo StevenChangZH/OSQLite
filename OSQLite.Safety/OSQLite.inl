@@ -1,6 +1,6 @@
 //
 //  OSQLite.cpp
-//  OSQLite
+//  OSQLite.Safety
 //
 //  Created by Steven Chang on 15/7/25.
 //  Copyright (c) 2015 Steven Chang. All rights reserved.
@@ -10,187 +10,379 @@
 
 
 namespace OSQLite {
-
-    // Define a templated struct named OSTypeBinding, used to encapsulate type bindings
-    // from database to clients, or vice versa. (at compile-time)
+    
+    // Define a templated struct named OSTypeOp (inherited from OSPlaceholder), used
+    // to encapsulate type bindings from database to clients, or vice versa. (at compile-time)
     //
-    // returnAssign: extract data from database to the tuple
-    // paramBinding: bind parameters to sql.
+    // Funtions:
+    //      ctors: used for OSTablePolicy class.
+    //      statementReturnAssign: extract data from database to the tuple
+    //      statementParamBinding: bind parameters to sql - for OSStatement operations
+    //      queryReturnAssign: OSQuery operations extracting data
+    //      queryParamBinding: OSQuery operations bind params
+    //      queryPrimaryKey: OSQuery operations insert primary key to sql string
     //
     // All functions may throw OSException.
     // Providing types including: int, unsigned int, long, unsigned long, std::string
+	struct OSPlaceHolder {
+        OSPlaceHolder(){}
+        virtual ~OSPlaceHolder(){}
+        virtual inline void queryReturnAssign(sqlite3_stmt* statement_) = 0;
+        virtual inline void queryParamBinding(sqlite3_stmt* statement_) = 0;
+        virtual inline void queryPrimaryKey(std::stringstream& sqlStream_) = 0;
+    };
     template <unsigned char NUM, typename... Args>
-    struct OSTypeBinding{
+    struct OSTypeOp : virtual public OSPlaceHolder {
+        
+        OSTypeOp(Args&... args_){ throw OSException("Unregisted type. Please check first."); }
+		virtual ~OSTypeOp(){}
+
         // If this function called, throw an error
         template <typename... Returns>
-        inline void returnAssign(std::tuple<Returns...>& tuple_, sqlite3_stmt* statement_) {
-            throw OSException("OSTypeBinding error: returnAssign: invalid type.");
+        static inline void statementReturnAssign(std::tuple<Returns...>& tuple_, sqlite3_stmt* statement_) {
+            throw OSException("OSTypeOp error: statementReturnAssign: invalid type.");
         }
         // If this function called, throw an error
-        inline void paramBinding(sqlite3_stmt* statement_, Args&...) {
-            throw OSException("OSTypeBinding error: paramBinding: invalid type.");
+        static inline void statementParamBinding(sqlite3_stmt* statement_, Args&...) {
+            throw OSException("OSTypeOp error: statementParamBinding: invalid type.");
+        }
+        // If this function called, throw an error
+        virtual inline void queryReturnAssign(sqlite3_stmt* statement_) override {
+            throw OSException("OSTypeOp error: queryReturnAssign: invalid type.");
+        }
+        // If this function called, throw an error
+        virtual inline void queryParamBinding(sqlite3_stmt* statement_) override {
+            throw OSException("OSTypeOp error: queryParamBinding: invalid type.");
+        }
+        // If this function called, throw an error
+        virtual inline void queryPrimaryKey(std::stringstream& sqlStream_) override {
+            throw OSException("OSTypeOp error: queryPrimaryKey: invalid type.");
         }
     };
-    // int. Warning: might lose data.
+    // int
     template <unsigned char NUM, typename... Args>
-    struct OSTypeBinding<NUM, int, Args...>{
-        OSTypeBinding<NUM+1, Args...> next;
-    
+    struct OSTypeOp<NUM, int, Args...> : virtual public OSPlaceHolder {
+        OSTypeOp<NUM+1, Args...> _next;
+        int& _ref;
+        
+        OSTypeOp(int& iValue_, Args&... args_):_ref(iValue_), _next(args_...){}
+		virtual ~OSTypeOp(){}
+
         template <typename... Returns>
-        inline void returnAssign(std::tuple<Returns...>& tuple_, sqlite3_stmt* statement_) {
+        static inline void statementReturnAssign(std::tuple<Returns...>& tuple_, sqlite3_stmt* statement_) {
             std::get<NUM>(tuple_) = sqlite3_column_int(statement_, NUM);
-            next.returnAssign(tuple_, statement_);
+            OSTypeOp<NUM+1, Args...>::statementReturnAssign(tuple_, statement_);
         }
         
         template <typename... Params>
-        inline void paramBinding(sqlite3_stmt* statement_, int& iValue_, Args&... args_) {
+        static inline void statementParamBinding(sqlite3_stmt* statement_, int& iValue_, Args&... args_) {
             int _result = sqlite3_bind_int(statement_, NUM+1, iValue_);
             if (_result != SQLITE_OK) {
-                throw OSException("paramBinding error. Bind int failed.", _result);
+                throw OSException("statementParamBinding error. Bind int failed.", _result);
             }
-            next.paramBinding(statement_, args_...);
+            OSTypeOp<NUM+1, Args...>::statementParamBinding(statement_, args_...);
+        }
+        
+        virtual inline void queryReturnAssign(sqlite3_stmt* statement_) override {
+            _ref = sqlite3_column_int(statement_, NUM);
+            _next.queryReturnAssign(statement_);
+        }
+        
+        virtual inline void queryParamBinding(sqlite3_stmt* statement_) override {
+            int _result = sqlite3_bind_int(statement_, NUM+1, _ref);
+            if (_result != SQLITE_OK) {
+                throw OSException("queryParamBinding error. Bind int failed.", _result);
+            }
+            _next.queryParamBinding(statement_);
+        }
+        
+        virtual inline void queryPrimaryKey(std::stringstream& sqlStream_) override {
+            sqlStream_ << _ref;
         }
     };
-    // unsigned int. Warning: might lose data.
+    // unsigned int
     template <unsigned char NUM, typename... Args>
-    struct OSTypeBinding<NUM, unsigned int, Args...>{
-        OSTypeBinding<NUM+1, Args...> next;
+    struct OSTypeOp<NUM, unsigned int, Args...> : virtual public OSPlaceHolder {
+        OSTypeOp<NUM+1, Args...> _next;
+        unsigned int& _ref;
         
+        OSTypeOp(unsigned int& iValue_, Args&... args_):_ref(iValue_), _next(args_...){}
+		virtual ~OSTypeOp(){}
+
         template <typename... Returns>
-        inline void returnAssign(std::tuple<Returns...>& tuple_, sqlite3_stmt* statement_) {
+        static inline void statementReturnAssign(std::tuple<Returns...>& tuple_, sqlite3_stmt* statement_) {
             std::get<NUM>(tuple_) = (unsigned int)sqlite3_column_int(statement_, NUM);
-            next.returnAssign(tuple_, statement_);
+            OSTypeOp<NUM+1, Args...>::statementReturnAssign(tuple_, statement_);
         }
         
         template <typename... Params>
-        inline void paramBinding(sqlite3_stmt* statement_, unsigned int& iValue_, Args&... args_) {
+        static inline void statementParamBinding(sqlite3_stmt* statement_, unsigned int& iValue_, Args&... args_) {
             int _result = sqlite3_bind_int(statement_, NUM+1, iValue_);
             if (_result != SQLITE_OK) {
-                throw OSException("paramBinding error. Bind unsigned int failed.", _result);
+                throw OSException("statementParamBinding error. Bind unsigned int failed.", _result);
             }
-            next.paramBinding(statement_, args_...);
+            OSTypeOp<NUM+1, Args...>::statementParamBinding(statement_, args_...);
+        }
+        
+        virtual inline void queryReturnAssign(sqlite3_stmt* statement_) override {
+            _ref = (unsigned int)sqlite3_column_int(statement_, NUM);
+            _next.queryReturnAssign(statement_);
+        }
+        
+        virtual inline void queryParamBinding(sqlite3_stmt* statement_) override {
+            int _result = sqlite3_bind_int(statement_, NUM+1, _ref);
+            if (_result != SQLITE_OK) {
+                throw OSException("queryParamBinding error. Bind unsigned int failed.", _result);
+            }
+            _next.queryParamBinding(statement_);
+        }
+        
+        virtual inline void queryPrimaryKey(std::stringstream& sqlStream_) override {
+            sqlStream_ << _ref;
         }
     };
     // long
     template <unsigned char NUM, typename... Args>
-    struct OSTypeBinding<NUM, long, Args...>{
-        OSTypeBinding<NUM+1, Args...> next;
+    struct OSTypeOp<NUM, long, Args...> : virtual public OSPlaceHolder {
+        OSTypeOp<NUM+1, Args...> _next;
+        long& _ref;
         
+        OSTypeOp(long& iValue_, Args&... args_):_ref(iValue_), _next(args_...){}
+		virtual ~OSTypeOp(){}
+
         template <typename... Returns>
-        inline void returnAssign(std::tuple<Returns...>& tuple_, sqlite3_stmt* statement_) {
-            std::get<NUM>(tuple_) = (long)sqlite3_column_int64(statement_, NUM);
-            next.returnAssign(tuple_, statement_);
+        static inline void statementReturnAssign(std::tuple<Returns...>& tuple_, sqlite3_stmt* statement_) {
+            std::get<NUM>(tuple_) = sqlite3_column_int64(statement_, NUM);
+            OSTypeOp<NUM+1, Args...>::statementReturnAssign(tuple_, statement_);
         }
         
         template <typename... Params>
-        inline void paramBinding(sqlite3_stmt* statement_, long& lValue_, Args&... args_) {
+        static inline void statementParamBinding(sqlite3_stmt* statement_, long& lValue_, Args&... args_) {
             int _result = sqlite3_bind_int64(statement_, NUM+1, lValue_);
             if (_result != SQLITE_OK) {
-                throw OSException("paramBinding error. Bind long failed.", _result);
+                throw OSException("statementParamBinding error. Bind long failed.", _result);
             }
-            next.paramBinding(statement_, args_...);
+            OSTypeOp<NUM+1, Args...>::statementParamBinding(statement_, args_...);
+        }
+        
+        virtual inline void queryReturnAssign(sqlite3_stmt* statement_) override {
+            _ref = (long)sqlite3_column_int64(statement_, NUM);
+            _next.queryReturnAssign(statement_);
+        }
+        
+        virtual inline void queryParamBinding(sqlite3_stmt* statement_) override {
+            int _result = sqlite3_column_int64(statement_, NUM+1, _ref);
+            if (_result != SQLITE_OK) {
+                throw OSException("queryParamBinding error. Bind long failed.", _result);
+            }
+            _next.queryParamBinding(statement_);
+        }
+        
+        virtual inline void queryPrimaryKey(std::stringstream& sqlStream_) override {
+            sqlStream_ << _ref;
         }
     };
     // unsigned long
     template <unsigned char NUM, typename... Args>
-    struct OSTypeBinding<NUM, unsigned long, Args...>{
-        OSTypeBinding<NUM+1, Args...> next;
+    struct OSTypeOp<NUM, unsigned long, Args...> : virtual public OSPlaceHolder {
+        OSTypeOp<NUM+1, Args...> _next;
+        unsigned long& _ref;
         
+        OSTypeOp(unsigned long& iValue_, Args&... args_):_ref(iValue_), _next(args_...){}
+		virtual ~OSTypeOp(){}
+
         template <typename... Returns>
-        inline void returnAssign(std::tuple<Returns...>& tuple_, sqlite3_stmt* statement_) {
+        static inline void statementReturnAssign(std::tuple<Returns...>& tuple_, sqlite3_stmt* statement_) {
             std::get<NUM>(tuple_) = (unsigned long)sqlite3_column_int(statement_, NUM);
-            next.returnAssign(tuple_, statement_);
+            OSTypeOp<NUM+1, Args...>::statementReturnAssign(tuple_, statement_);
         }
         
         template <typename... Params>
-        inline void paramBinding(sqlite3_stmt* statement_, unsigned long& lValue_, Args&... args_) {
+        static inline void statementParamBinding(sqlite3_stmt* statement_, unsigned long& lValue_, Args&... args_) {
             int _result = sqlite3_bind_int64(statement_, NUM+1, lValue_);
             if (_result != SQLITE_OK) {
-                throw OSException("paramBinding error. Bind unsigned long failed.", _result);
+                throw OSException("statementParamBinding error. Bind unsigned long failed.", _result);
             }
-            next.paramBinding(statement_, args_...);
+            OSTypeOp<NUM+1, Args...>::statementParamBinding(statement_, args_...);
+        }
+        
+        virtual inline void queryReturnAssign(sqlite3_stmt* statement_) override {
+            _ref = (unsigned long)sqlite3_column_int64(statement_, NUM);
+            _next.queryReturnAssign(statement_);
+        }
+        
+        virtual inline void queryParamBinding(sqlite3_stmt* statement_) override {
+            int _result = sqlite3_column_int64(statement_, NUM+1, _ref);
+            if (_result != SQLITE_OK) {
+                throw OSException("queryParamBinding error. Bind unsigned long failed.", _result);
+            }
+            _next.queryParamBinding(statement_);
+        }
+        
+        virtual inline void queryPrimaryKey(std::stringstream& sqlStream_) override {
+            sqlStream_ << _ref;
         }
     };
     // float. Warning: might lose data.
     template <unsigned char NUM, typename... Args>
-    struct OSTypeBinding<NUM, float, Args...>{
-        OSTypeBinding<NUM+1, Args...> next;
+    struct OSTypeOp<NUM, float, Args...> : virtual public OSPlaceHolder {
+        OSTypeOp<NUM+1, Args...> _next;
+        float& _ref;
         
+        OSTypeOp(float& iValue_, Args&... args_):_ref(iValue_), _next(args_...){}
+		virtual ~OSTypeOp(){}
+
         template <typename... Returns>
-        inline void returnAssign(std::tuple<Returns...>& tuple_, sqlite3_stmt* statement_) {
+        static inline void statementReturnAssign(std::tuple<Returns...>& tuple_, sqlite3_stmt* statement_) {
             std::get<NUM>(tuple_) = (float)(sqlite3_column_double(statement_, NUM));
-            next.returnAssign(tuple_, statement_);
+            OSTypeOp<NUM+1, Args...>::statementReturnAssign(tuple_, statement_);
         }
         
         template <typename... Params>
-        inline void paramBinding(sqlite3_stmt* statement_, float& fValue_, Args&... args_) {
+        static inline void statementParamBinding(sqlite3_stmt* statement_, float& fValue_, Args&... args_) {
             int _result = sqlite3_bind_double(statement_, NUM+1, fValue_);
             if (_result != SQLITE_OK) {
-                throw OSException("paramBinding error. Bind float failed.", _result);
+                throw OSException("statementParamBinding error. Bind float failed.", _result);
             }
-            next.paramBinding(statement_, args_...);
+            OSTypeOp<NUM+1, Args...>::statementParamBinding(statement_, args_...);
+        }
+        
+        virtual inline void queryReturnAssign(sqlite3_stmt* statement_) override {
+            _ref = (float)(sqlite3_column_double(statement_, NUM));
+            _next.queryReturnAssign(statement_);
+        }
+        
+        virtual inline void queryParamBinding(sqlite3_stmt* statement_) override {
+            int _result = sqlite3_bind_double(statement_, NUM+1, _ref);
+            if (_result != SQLITE_OK) {
+                throw OSException("queryParamBinding error. Bind float failed.", _result);
+            }
+            _next.queryParamBinding(statement_);
+        }
+        
+        virtual inline void queryPrimaryKey(std::stringstream& sqlStream_) override {
+            sqlStream_ << _ref;
         }
     };
     // double
     template <unsigned char NUM, typename... Args>
-    struct OSTypeBinding<NUM, double, Args...>{
-        OSTypeBinding<NUM+1, Args...> next;
-    
+    struct OSTypeOp<NUM, double, Args...> : virtual public OSPlaceHolder {
+        OSTypeOp<NUM+1, Args...> _next;
+        double& _ref;
+        
+        OSTypeOp(double& iValue_, Args&... args_):_ref(iValue_), _next(args_...){}
+		virtual ~OSTypeOp(){}
+
         template <typename... Returns>
-        inline void returnAssign(std::tuple<Returns...>& tuple_, sqlite3_stmt* statement_) {
+        static inline void statementReturnAssign(std::tuple<Returns...>& tuple_, sqlite3_stmt* statement_) {
             std::get<NUM>(tuple_) = (double)sqlite3_column_double(statement_, NUM);
-            next.returnAssign(tuple_, statement_);
+            OSTypeOp<NUM+1, Args...>::statementReturnAssign(tuple_, statement_);
         }
         
         template <typename... Params>
-        inline void paramBinding(sqlite3_stmt* statement_, double& dValue_, Args&... args_) {
+        static inline void statementParamBinding(sqlite3_stmt* statement_, double& dValue_, Args&... args_) {
             int _result = sqlite3_bind_double(statement_, NUM+1, dValue_);
             if (_result != SQLITE_OK) {
-                throw OSException("paramBinding error. Bind double failed.", _result);
+                throw OSException("statementParamBinding error. Bind double failed.", _result);
             }
-            next.paramBinding(statement_, args_...);
+            OSTypeOp<NUM+1, Args...>::statementParamBinding(statement_, args_...);
+        }
+        
+        virtual inline void queryReturnAssign(sqlite3_stmt* statement_) override {
+            _ref = (double)(sqlite3_column_double(statement_, NUM));
+            _next.queryReturnAssign(statement_);
+        }
+        
+        virtual inline void queryParamBinding(sqlite3_stmt* statement_) override {
+            int _result = sqlite3_bind_double(statement_, NUM+1, _ref);
+            if (_result != SQLITE_OK) {
+                throw OSException("queryParamBinding error. Bind double failed.", _result);
+            }
+            _next.queryParamBinding(statement_);
+        }
+        
+        virtual inline void queryPrimaryKey(std::stringstream& sqlStream_) override {
+            sqlStream_ << _ref;
         }
     };
     // std::string
     template <unsigned char NUM, typename... Args>
-    struct OSTypeBinding<NUM, std::string, Args...>{
-        OSTypeBinding<NUM+1, Args...> next;
-    
+    struct OSTypeOp<NUM, std::string, Args...> : virtual public OSPlaceHolder {
+        OSTypeOp<NUM+1, Args...> _next;
+        std::string& _ref;
+        
+        OSTypeOp(std::string& iValue_, Args&... args_):_ref(iValue_), _next(args_...){}
+		virtual ~OSTypeOp(){}
+
         template <typename... Returns>
-        inline void returnAssign(std::tuple<Returns...>& tuple_, sqlite3_stmt* statement_) {
+        static inline void statementReturnAssign(std::tuple<Returns...>& tuple_, sqlite3_stmt* statement_) {
             std::string sValue((const char*)sqlite3_column_text(statement_, NUM));
             std::get<NUM>(tuple_) = sValue;
-            next.returnAssign(tuple_, statement_);
+            OSTypeOp<NUM+1, Args...>::statementReturnAssign(tuple_, statement_);
         }
         
         template <typename... Params>
-        inline void paramBinding(sqlite3_stmt* statement_, std::string& sValue_, Args&... args_) {
+        static inline void statementParamBinding(sqlite3_stmt* statement_, std::string& sValue_, Args&... args_) {
             int _result = sqlite3_bind_text(statement_, NUM+1, sValue_.c_str(), (int)sValue_.length(), SQLITE_TRANSIENT);
             if (_result != SQLITE_OK) {
-                throw OSException("paramBinding error. Bind std::string failed.", _result);
+                throw OSException("statementParamBinding error. Bind std::string failed.", _result);
             }
-            next.paramBinding(statement_, args_...);
+            OSTypeOp<NUM+1, Args...>::statementParamBinding(statement_, args_...);
+        }
+        
+        virtual inline void queryReturnAssign(sqlite3_stmt* statement_) override {
+            std::string sValue((const char*)sqlite3_column_text(statement_, NUM));
+            _ref = sValue;
+            _next.queryReturnAssign(statement_);
+        }
+        
+        virtual inline void queryParamBinding(sqlite3_stmt* statement_) override {
+            int _result = sqlite3_bind_text(statement_, NUM+1, _ref.c_str(), (int)_ref.length(), SQLITE_TRANSIENT);
+            if (_result != SQLITE_OK) {
+                throw OSException("queryParamBinding error. Bind std::string failed.", _result);
+            }
+            _next.queryParamBinding(statement_);
+        }
+        
+        virtual inline void queryPrimaryKey(std::stringstream& sqlStream_) override {
+            sqlStream_ << _ref;
         }
     };
-
+    
     template <unsigned char NUM>
-    struct OSTypeBinding<NUM> {
+    struct OSTypeOp<NUM> : virtual public OSPlaceHolder {
+        
+        OSTypeOp() {}
+		virtual ~OSTypeOp(){}
+        
         template <typename... Returns>
-        inline void returnAssign(std::tuple<Returns...>& tuple_, sqlite3_stmt* statement_) {
+        static inline void statementReturnAssign(std::tuple<Returns...>& tuple_, sqlite3_stmt* statement_) {
             // End of recursive type binding. Do nothing.
         }
         
-        inline void paramBinding(sqlite3_stmt* statement_) {
+        static inline void statementParamBinding(sqlite3_stmt* statement_) {
+            // End of recursive type binding. Do nothing.
+        }
+        
+        virtual inline void queryReturnAssign(sqlite3_stmt* statement_) override {
+            // End of recursive type binding. Do nothing.
+        }
+        
+        virtual inline void queryParamBinding(sqlite3_stmt* statement_) override {
+            // End of recursive type binding. Do nothing.
+        }
+        
+        virtual inline void queryPrimaryKey(std::stringstream& sqlStream_) override {
             // End of recursive type binding. Do nothing.
         }
     };
-
     
-
+    
+    
     
     
     // Functions for OSException
-	OSException::OSException() noexcept : _content("OSLite exception"), _tag(0)
+    OSException::OSException() noexcept : _content("OSLite exception"), _tag(0)
     {}
     
     OSException::OSException(const char* content_) noexcept : _content(content_), _tag(0)
@@ -213,118 +405,34 @@ namespace OSQLite {
     
     // Functions for OSTablePolicy
     template <class _DerivedCLS_>
-    OSTablePolicy<_DerivedCLS_>::OSTablePolicy()
-    {}
+    template <typename... Args>
+    OSTablePolicy<_DerivedCLS_>::OSTablePolicy(const std::string& tableName_, std::initializer_list<std::string> keyNamesList_, Args&... args_) throw(OSException)
+    {
+        if (!_hasBindings) {
+            _tableName = tableName_;
+            _keyNameVec = keyNamesList_;
+            _hasBindings = true;
+        }
+        _keyReference = new OSTypeOp<0, Args...>(args_...);
+    }
     
     template <class _DerivedCLS_>
     OSTablePolicy<_DerivedCLS_>::~OSTablePolicy()
     {
-        if (_primaryKeyHolder != nullptr) {
-            delete _primaryKeyHolder;
-            _primaryKeyHolder = nullptr;
-        }
-        
-        auto _mapend = _keyBindingMap.end();
-        for (auto _it = _keyBindingMap.begin(); _it != _mapend; ++_it) {
-            auto _holderptr = _it->second;
-            if (_holderptr != nullptr) {
-                delete _holderptr;
-                _it->second = nullptr;
-            }
-        }
-        _keyBindingMap.clear();
-    }
-    
-    template <class _DerivedCLS_>
-    bool OSTablePolicy<_DerivedCLS_>::checkBinding()
-    {
-        return (_tableName!="") && (_primaryKeyName!="") && (_primaryKeyHolder!=nullptr) && (_keyBindingMap.size());
-    }
-    
-    template <class _DerivedCLS_>
-    inline void OSTablePolicy<_DerivedCLS_>::bind_table_name(const std::string& tableName_)
-    {
-        _tableName = tableName_;
-    }
-    
-    template <class _DerivedCLS_>
-    template <typename Tp>
-    inline typename std::enable_if<!std::is_pointer<Tp>::value, void>::type OSTablePolicy<_DerivedCLS_>::bind_primary_key(const std::string& keyName_, Tp& memVar_)
-    {
-        _primaryKeyName = keyName_;
-        if (_primaryKeyHolder != nullptr) {
-            delete _primaryKeyHolder;
-            _primaryKeyHolder = nullptr;
-        }
-        _primaryKeyHolder = new OSKeyHolder<Tp>(memVar_);
-    }
-    
-    template <class _DerivedCLS_>
-    template <typename Tp>
-    inline typename std::enable_if<!std::is_pointer<Tp>::value, void>::type OSTablePolicy<_DerivedCLS_>::bind_key(const std::string& keyName_, Tp& memVar_)
-    {
-        auto _resultPair = _keyBindingMap.emplace(keyName_, new OSKeyHolder<Tp>(memVar_));
-        // Replace the old to new
-        if (!_resultPair.second) {
-            auto _resultptr = _keyBindingMap[keyName_];
-            if (_resultptr != nullptr) {
-                delete _resultptr;
-            }
-            _keyBindingMap[keyName_] = new OSKeyHolder<Tp>(memVar_);
+        if (_keyReference != nullptr) {
+            delete _keyReference;
+            _keyReference = nullptr;
         }
     }
     
     template <class _DerivedCLS_>
-    inline void OSTablePolicy<_DerivedCLS_>::insertDataToSQL(std::stringstream& stream_, OSPlaceHolder* holder_) throw(OSException)
+    bool OSTablePolicy<_DerivedCLS_>::checkBindings()
     {
-        // Err, RTTI is needed.
-        if (holder_->type() == typeid(int)) {
-            stream_ << ((OSKeyHolder<int>*)(holder_))->_content;
-        } else if (holder_->type() == typeid(unsigned int)) {
-            stream_ << ((OSKeyHolder<unsigned int>*)(holder_))->_content;
-        } else if (holder_->type() == typeid(long)) {
-            stream_ << ((OSKeyHolder<long>*)(holder_))->_content;
-        } else if (holder_->type() == typeid(unsigned long)) {
-            stream_ << ((OSKeyHolder<unsigned long>*)(holder_))->_content;
-        } else if (holder_->type() == typeid(float)) {
-            stream_ << ((OSKeyHolder<float>*)(holder_))->_content;
-        } else if (holder_->type() == typeid(double)) {
-            stream_ << ((OSKeyHolder<double>*)(holder_))->_content;
-        } else if (holder_->type() == typeid(std::string)) {
-            stream_ << ((OSKeyHolder<std::string>*)(holder_))->_content;
-        } else {
-            // No matches. throw OSException.
-            throw OSException("insertDataToSQL error. Invalid type.");
-        }
+        return _hasBindings && _keyNameVec.size()>1;
     }
-         
-    template <class _DerivedCLS_>
-    inline void OSTablePolicy<_DerivedCLS_>::extractDataFromDB(sqlite3_stmt* statement_, OSPlaceHolder* holder_, int index_) throw(OSException)
-    {
-        // Err, RTTI is still needed.
-        if (holder_->type() == typeid(int)) {
-            ((OSKeyHolder<int>*)(holder_))->_content = (unsigned int)sqlite3_column_int(statement_, index_);
-        } else if (holder_->type() == typeid(unsigned int)) {
-            ((OSKeyHolder<unsigned int>*)(holder_))->_content = (int)sqlite3_column_int(statement_, index_);
-        } else if (holder_->type() == typeid(long)) {
-            ((OSKeyHolder<long>*)(holder_))->_content = (long)sqlite3_column_int64(statement_, index_);
-        } else if (holder_->type() == typeid(unsigned long)) {
-            ((OSKeyHolder<unsigned long>*)(holder_))->_content = (unsigned long)sqlite3_column_int64(statement_, index_);
-        } else if (holder_->type() == typeid(float)) {
-            ((OSKeyHolder<float>*)(holder_))->_content = (float)sqlite3_column_double(statement_, index_);
-        } else if (holder_->type() == typeid(double)) {
-            ((OSKeyHolder<double>*)(holder_))->_content = (double)sqlite3_column_double(statement_, index_);
-        } else if (holder_->type() == typeid(std::string)) {
-            std::string sValue((const char*)sqlite3_column_text(statement_, index_));
-            ((OSKeyHolder<std::string>*)(holder_))->_content= sValue;
-        } else {
-            // No matches. throw OSException.
-            throw OSException("extractDataFromDB error. Invalid type.");
-        }
-    }
-
-
-
+    
+    
+    
     // Functions for OSQuery
     OSQuery::OSQuery(const OSDatabase& database_) throw(OSException) : _connection(database_._connection)
     {
@@ -332,71 +440,78 @@ namespace OSQLite {
             throw OSException("OSStatement ctor error: SQLite connection is not opened.");
         }
     }
-
+    
     OSQuery::~OSQuery()
-    {}
+    {
+        if (_statement != nullptr) {
+            sqlite3_finalize(_statement);
+            _statement = nullptr;
+        }
+    }
     
     template <typename Table>
     typename std::enable_if<std::is_base_of<OSTablePolicy<Table>, Table>::value, void>::type OSQuery::save(Table& table_) throw(OSException)
     {
-        // Check the acceptance of table binding
-        if (!table_.checkBinding()) {
-            throw OSException("save error: table binding is not acceptable.");
-        }
-        
-        // Construct the SQL string and fill in data directly
-        std::stringstream _sqlStream;
-        _sqlStream << "insert into " + table_._tableName + "(";
-        std::stringstream _endStream;
-        _endStream << ") values('";
-        
-        // Add keys and params
-        _sqlStream << table_._primaryKeyName << ", ";
-        table_.insertDataToSQL(_endStream, table_._primaryKeyHolder);
-        _endStream << "', ";
-        
-        auto _bindMapEnd = table_._keyBindingMap.end();
-        for (auto _it = table_._keyBindingMap.begin(); _it != _bindMapEnd; ++_it) {
-            _sqlStream << _it->first << ", ";
-            _endStream << "'";
-            table_.insertDataToSQL(_endStream, _it->second);
-            _endStream << "', ";
-        }
-        std::string _sqlStr = _sqlStream.str();
-        _sqlStr[_sqlStr.size()-2] = ' ';
-        std::string _sqlEnd = _endStream.str();
-        _sqlEnd[_sqlEnd.size()-2] = ' ';
-        _sqlEnd += ")";
-        _sqlStr += _sqlEnd;
-        
-        // Execute
-        int _result = sqlite3_exec(_connection, _sqlStr.c_str(), nullptr, nullptr, nullptr);
-        if (_result != SQLITE_OK) {
-            throw OSException("save error. sqlite3_exec execution failed.", _result);
+        try {
+            // Check the acceptance of table binding
+            if (!table_.checkBindings()) {
+                throw OSException("save error: table binding is not acceptable.");
+            }
+            
+            // Construct the SQL string and fill in data
+            std::string _sqlString = "insert into " + table_._tableName + "(";
+            std::string _endString = " values(";
+            for (auto& _str : table_._keyNameVec) {
+                _sqlString += _str;
+                _sqlString +=",";
+                _endString +="?,";
+            }
+            _sqlString[_sqlString.size()-1] = ')';
+            _endString[_endString.size()-1] = ')';
+            _sqlString += _endString;
+            
+            // Prepare statement first.
+            int _result = sqlite3_prepare_v2(_connection, _sqlString.c_str(), (int)_sqlString.size(), &_statement, nullptr);
+            if (_result != SQLITE_OK) {
+                throw OSException("save error: Cannot prepare the sqlite3_stmt.", _result);
+            }
+            
+            // Parameter binding.
+            table_._keyReference->queryParamBinding(_statement);
+            
+            // Execute
+            _result = sqlite3_step(_statement);
+            if (_result != SQLITE_DONE) {
+                throw OSException("save error. Execute SQLString failed.", _result);
+            }
+            
+            sqlite3_finalize(_statement);
+            _statement = nullptr;
+        } catch (const OSException&) {
+            sqlite3_finalize(_statement);
+            _statement = nullptr;
+            throw;
         }
     }
-            
+    
     template <typename Table>
     typename std::enable_if<std::is_base_of<OSTablePolicy<Table>, Table>::value, bool>::type OSQuery::exists(Table& table_) throw(OSException)
     {
         // Check the acceptance of table binding
-        if (!table_.checkBinding()) {
+        if (!table_.checkBindings()) {
             throw OSException("exists error: table binding is not acceptable.");
         }
         
         // Process select count operations to check if the data exists
         // Construct the SQL string and fill in data directly
         std::stringstream _sqlStream;
-        _sqlStream << "select count(*) from " + table_._tableName + " where ";
-        
-        // Add keys and params
-        _sqlStream << table_._primaryKeyName << "='";
-        table_.insertDataToSQL(_sqlStream, table_._primaryKeyHolder);
+        _sqlStream << "select count(*) from " << table_._tableName << " where " << table_._keyNameVec[0] << "='";
+        table_._keyReference->queryPrimaryKey(_sqlStream);
         _sqlStream << "'";
-        std::string _sqlStr = _sqlStream.str();
+        std::string _sqlString = _sqlStream.str();
         
         // Execute
-        int _result = sqlite3_exec(_connection, _sqlStr.c_str(), [](void*,int,char** iptr2,char**){return ((**iptr2)=='0')-1;}, nullptr, nullptr);
+        int _result = sqlite3_exec(_connection, _sqlString.c_str(), [](void*,int,char** iptr2,char**){return ((**iptr2)=='0')-1;}, nullptr, nullptr);
         if (_result == SQLITE_ABORT) {
             // Exists.
             return true;
@@ -407,98 +522,104 @@ namespace OSQLite {
             throw OSException("exists error. sqlite3_exec execution failed.", _result);
         }
     }
-            
+    
     template <typename Table>
-    typename std::enable_if<std::is_base_of<OSTablePolicy<Table>, Table>::value, void>::type OSQuery::fill(Table& table_) throw(OSException)
+    typename std::enable_if<std::is_base_of<OSTablePolicy<Table>, Table>::value, bool>::type OSQuery::fill(Table& table_) throw(OSException)
     {
-        // statement
-        sqlite3_stmt* _statement = nullptr;
         try {
             // Check the acceptance of table binding
-            if (!table_.checkBinding()) {
-                throw OSException("exists error: table binding is not acceptable.");
+            if (!table_.checkBindings()) {
+                throw OSException("fill error: table binding is not acceptable.");
             }
             
             // Construct SQL string
             std::stringstream _sqlStream;
-            _sqlStream << "select " ;
-            std::stringstream _endStream;
-            for (auto& _it : table_._keyBindingMap) {
-                _sqlStream << _it.first << ", ";
+            _sqlStream << "select ";
+            for (auto& _str : table_._keyNameVec) {
+                _sqlStream << _str << ",";
             }
-            _endStream << "from " << table_._tableName << " where " << table_._primaryKeyName << "='";
-            table_.insertDataToSQL(_endStream, table_._primaryKeyHolder);
-            _endStream << "'";
             std::string _sqlString = _sqlStream.str();
-            _sqlString[_sqlString.size()-2] = ' ';
-            _sqlString += _endStream.str();
+            _sqlString[_sqlString.size()-1] = ' ';
+            _sqlStream.str("");
+            _sqlStream << "from " << table_._tableName << " where " << table_._keyNameVec[0] << "='";
+            table_._keyReference->queryPrimaryKey(_sqlStream);
+            _sqlStream << "'";
+            _sqlString += _sqlStream.str();
             
-            // Prepare statement
-            int _result = sqlite3_prepare_v2(_connection, _sqlString.c_str(), (int)_sqlString.length(), &_statement, nullptr);
+            // Prepare statement first.
+            int _result = sqlite3_prepare_v2(_connection, _sqlString.c_str(), (int)_sqlString.size(), &_statement, nullptr);
             if (_result != SQLITE_OK) {
                 throw OSException("fill error: Cannot prepare the sqlite3_stmt.", _result);
             }
             
             // Get value.
             int _colCount = sqlite3_column_count(_statement);
-            assert(_colCount == table_._keyBindingMap.size());
-            int _loopCount = 0;
+            assert(_colCount == table_._keyNameVec.size());
             _result = sqlite3_step(_statement);
             if (_result == SQLITE_DONE) {
-                throw OSException("fill error: no records found", _result);
+                sqlite3_finalize(_statement);
+                _statement = nullptr;
+                return false;
             }
             if (_result != SQLITE_ROW) {
                 throw OSException("fill error: step error", _result);
             }
-            for (auto& _it : table_._keyBindingMap) {
-                table_.extractDataFromDB(_statement, _it.second, _loopCount);
-                ++_loopCount;
-            }
+            table_._keyReference->queryReturnAssign(_statement);
+            sqlite3_finalize(_statement);
+            _statement = nullptr;
+            return true;
             
         } catch (const OSException&) {
             sqlite3_finalize(_statement);
             _statement = nullptr;
             throw;
         }
-        
-        sqlite3_finalize(_statement);
-        _statement = nullptr;
     }
     
     template <typename Table>
     typename std::enable_if<std::is_base_of<OSTablePolicy<Table>, Table>::value, void>::type OSQuery::update(Table& table_) throw(OSException)
     {
-        // Check the acceptance of table binding
-        if (!table_.checkBinding()) {
-            throw OSException("update error: table binding is not acceptable.");
-        }
-        
-        // Construct the SQL string and fill in data directly
-        std::stringstream _sqlStream;
-        _sqlStream << "update " + table_._tableName + " set ";
-        std::stringstream _endStream;
-        _endStream << "where ";
-        
-        // Add keys and params
-        _endStream << table_._primaryKeyName << "='";
-        table_.insertDataToSQL(_endStream, table_._primaryKeyHolder);
-        _endStream << "'";
-        
-        auto _bindMapEnd = table_._keyBindingMap.end();
-        for (auto _it = table_._keyBindingMap.begin(); _it != _bindMapEnd; ++_it) {
-            _sqlStream << _it->first << "='";
-            table_.insertDataToSQL(_sqlStream, _it->second);
-            _sqlStream << "', ";
-        }
-        std::string _sqlStr = _sqlStream.str();
-        _sqlStr[_sqlStr.size()-2] = ' ';
-        std::string _sqlEnd = _endStream.str();
-        _sqlStr += _sqlEnd;
-        
-        // Execute
-        int _result = sqlite3_exec(_connection, _sqlStr.c_str(), nullptr, nullptr, nullptr);
-        if (_result != SQLITE_OK) {
-            throw OSException("update error. sqlite3_exec execution failed.", _result);
+        try {
+            // Check the acceptance of table binding
+            if (!table_.checkBindings()) {
+                throw OSException("update error: table binding is not acceptable.");
+            }
+            
+            // Construct the SQL string and fill in data
+            std::stringstream _sqlStream;
+            _sqlStream << "update  " << table_._tableName << " set ";
+            for (auto& _str : table_._keyNameVec) {
+                _sqlStream << _str << "=?,";
+            }
+            std::string _sqlString = _sqlStream.str();
+            _sqlString[_sqlString.size()-1] = ' ';
+            _sqlStream.str("");
+            _sqlStream << " where " << table_._keyNameVec[0] << "='";
+            table_._keyReference->queryPrimaryKey(_sqlStream);
+            _sqlStream << "'";
+            _sqlString += _sqlStream.str();
+            
+            // Prepare statement first.
+            int _result = sqlite3_prepare_v2(_connection, _sqlString.c_str(), (int)_sqlString.size(), &_statement, nullptr);
+            if (_result != SQLITE_OK) {
+                throw OSException("update error: Cannot prepare the sqlite3_stmt.", _result);
+            }
+            
+            // Parameter binding.
+            table_._keyReference->queryParamBinding(_statement);
+            
+            // Execute
+            _result = sqlite3_step(_statement);
+            if (_result != SQLITE_DONE) {
+                throw OSException("update error. Execute SQLString failed.", _result);
+            }
+            
+            sqlite3_finalize(_statement);
+            _statement = nullptr;
+        } catch(const OSException&) {
+            sqlite3_finalize(_statement);
+            _statement = nullptr;
+            throw;
         }
     }
     
@@ -523,31 +644,28 @@ namespace OSQLite {
     typename std::enable_if<std::is_base_of<OSTablePolicy<Table>, Table>::value, void>::type OSQuery::deleteObject(Table& table_) throw(OSException)
     {
         // Check the acceptance of table binding
-        if (!table_.checkBinding()) {
+        if (!table_.checkBindings()) {
             throw OSException("update error: table binding is not acceptable.");
         }
         
         // Construct the SQL string and fill in data directly
+        std::string _sqlString = "delete from " + table_._tableName + " where ";
+        _sqlString += table_._keyNameVec[0];
+        _sqlString += "='";
         std::stringstream _sqlStream;
-        _sqlStream << "delete from " + table_._tableName + " where ";
-        
-        // Add keys and params
-        _sqlStream << table_._primaryKeyName << "='";
-        table_.insertDataToSQL(_sqlStream, table_._primaryKeyHolder);
-        _sqlStream << "'";
-        
-        std::string _sqlStr = _sqlStream.str();
+        table_._keyReference->queryPrimaryKey(_sqlStream);
+        _sqlString += "'";
         
         // Execute
-        int _result = sqlite3_exec(_connection, _sqlStr.c_str(), nullptr, nullptr, nullptr);
+        int _result = sqlite3_exec(_connection, _sqlString.c_str(), nullptr, nullptr, nullptr);
         if (_result != SQLITE_OK) {
             throw OSException("update error. sqlite3_exec execution failed.", _result);
         }
     }
-
-
-
-
+    
+    
+    
+    
     // Functions for OSStatement
     OSStatement::OSStatement(const OSDatabase& database_) throw(OSException) : _connection(database_._connection)
     {
@@ -555,7 +673,7 @@ namespace OSQLite {
             throw OSException("OSStatement ctor error: SQLite connection is not opened.");
         }
     }
-
+    
     OSStatement::~OSStatement()
     {
         if (_statement != nullptr) {
@@ -563,7 +681,7 @@ namespace OSQLite {
             _statement = nullptr;
         }
     }
-
+    
     template <typename... Args>
     void OSStatement::execute(const std::string& sqlString_, Args&... args_) throw(OSException)
     try {
@@ -572,17 +690,16 @@ namespace OSQLite {
         if (_result != SQLITE_OK) {
             throw OSException("execute error: Cannot prepare the sqlite3_stmt.", _result);
         }
-            
+        
         // Parameter binding.
-        OSTypeBinding<0, Args...> _typeBinding;
-        _typeBinding.paramBinding(_statement, args_...);
+        OSTypeOp<0, Args...>::statementParamBinding(_statement, args_...);
         
         // Execute
         _result = sqlite3_step(_statement);
         if (_result != SQLITE_DONE) {
             throw OSException("execute error. Execute SQLString failed.", _result);
         }
-            
+        
         sqlite3_finalize(_statement);
         _statement = nullptr;
         
@@ -592,7 +709,7 @@ namespace OSQLite {
         throw;
     }
     
-
+    
     void OSStatement::execute(const std::string& sqlString_) throw(OSException)
     {
         int _result = sqlite3_exec(_connection, sqlString_.c_str(), nullptr, nullptr, nullptr);
@@ -611,8 +728,7 @@ namespace OSQLite {
         }
         
         // Parameter binding.
-        OSTypeBinding<0, Args...> _typeBinding;
-        _typeBinding.paramBinding(_statement, args_...);
+        OSTypeOp<0, Args...>::statementParamBinding(_statement, args_...);
         
         // Create a vector and a tuple instance. Get values, and assign them to
         // the tuple. Finally push the tuple back to the vector.
@@ -631,8 +747,7 @@ namespace OSQLite {
                 throw OSException("execute error: step error", _result);
             }
             
-            OSTypeBinding<0, Returns...> _typeReturns;
-            _typeReturns.returnAssign(_tuple, _statement);
+            OSTypeOp<0, Returns...>::statementReturnAssign(_tuple, _statement);
             _returnVec.push_back(_tuple);
         }
         
@@ -645,8 +760,8 @@ namespace OSQLite {
         _statement = nullptr;
         throw;
     }
-            
-
+    
+    
     template <typename R, typename... Args>
     R OSStatement::executeScalar(const std::string& sqlString_, Args&... args_) throw(OSException)
     try {
@@ -657,8 +772,7 @@ namespace OSQLite {
         }
         
         // Parameter binding.
-        OSTypeBinding<0, Args...> _typeBinding;
-        _typeBinding.paramBinding(_statement, args_...);
+        OSTypeOp<0, Args...>::statementParamBinding(_statement, args_...);
         
         // Execute
         _result = sqlite3_step(_statement);
@@ -666,8 +780,7 @@ namespace OSQLite {
             throw OSException("executeScalar error. Execute SQLString failed.", _result);
         }
         std::tuple<R> _tuple;
-        OSTypeBinding<0, R> _typeReturns;
-        _typeReturns.returnAssign(_tuple, _statement);
+        OSTypeOp<0, R>::statementReturnAssign(_tuple, _statement);
         
         sqlite3_finalize(_statement);
         _statement = nullptr;
@@ -678,13 +791,37 @@ namespace OSQLite {
         _statement = nullptr;
         throw;
     }
-
     
-
-
-
-
-
+    inline void OSStatement::begin() throw(OSException)
+    {
+        this->begin("");
+    }
+    
+    inline void OSStatement::begin(const std::string& beginArg_) throw(OSException)
+    try {
+        this->execute("begin" + beginArg_ );
+    } catch(const OSException& e) {
+        throw OSException("begin error: transaction execution failure.", e.tag());
+    }
+    
+    inline void OSStatement::commit() throw(OSException)
+    try {
+        this->execute("commit");
+    } catch(const OSException& e) {
+        throw OSException("commit error: transaction execution failure.", e.tag());
+    }
+    
+    inline void OSStatement::rollback() throw(OSException)
+    try {
+        this->execute("rollback");
+    } catch(const OSException& e) {
+        throw OSException("rollback error: transaction execution failure.", e.tag());
+    }
+    
+    
+    
+    
+    
     // Functions for OSDatabase
     OSDatabase::OSDatabase(const std::string& filePath_) throw(OSException)
     {
@@ -709,5 +846,5 @@ namespace OSQLite {
             }
         }
     }
-
+    
 }

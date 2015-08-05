@@ -10,10 +10,22 @@
 		B04CC81F1B63BCDC00AA2372 /* OSQLiteTest.cpp in Sources */ = {isa = PBXBuildFile; fileRef = B04CC81E1B63BCDC00AA2372 /* OSQLiteTest.cpp */; };
 		B04CC82B1B63BD2F00AA2372 /* sqlite3.c in Sources */ = {isa = PBXBuildFile; fileRef = B04CC8291B63BD2F00AA2372 /* sqlite3.c */; };
 		B04CC82E1B63BD5D00AA2372 /* OSQLite.inl in Sources */ = {isa = PBXBuildFile; fileRef = B04CC82C1B63BD5D00AA2372 /* OSQLite.inl */; };
+		B04CC8441B71A6A200AA2372 /* OSQLiteTest.cpp in Sources */ = {isa = PBXBuildFile; fileRef = B04CC8431B71A6A200AA2372 /* OSQLiteTest.cpp */; };
+		B04CC84B1B71C4B300AA2372 /* sqlite3.c in Sources */ = {isa = PBXBuildFile; fileRef = B04CC8291B63BD2F00AA2372 /* sqlite3.c */; };
+		B04CC84E1B723D0C00AA2372 /* OSQLite.cpp in Sources */ = {isa = PBXBuildFile; fileRef = B04CC84C1B723D0C00AA2372 /* OSQLite.cpp */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
 		B04CC81A1B63BCDC00AA2372 /* CopyFiles */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = /usr/share/man/man1/;
+			dstSubfolderSpec = 0;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 1;
+		};
+		B04CC83F1B71A6A200AA2372 /* CopyFiles */ = {
 			isa = PBXCopyFilesBuildPhase;
 			buildActionMask = 2147483647;
 			dstPath = /usr/share/man/man1/;
@@ -31,10 +43,22 @@
 		B04CC82A1B63BD2F00AA2372 /* sqlite3.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = sqlite3.h; path = SQLite/sqlite3.h; sourceTree = "<group>"; };
 		B04CC82C1B63BD5D00AA2372 /* OSQLite.inl */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = OSQLite.inl; sourceTree = "<group>"; };
 		B04CC82D1B63BD5D00AA2372 /* OSQLite.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = OSQLite.h; sourceTree = "<group>"; };
+		B04CC8301B70F25100AA2372 /* InterfacesDisplay.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = InterfacesDisplay.h; sourceTree = "<group>"; };
+		B04CC8411B71A6A200AA2372 /* OSQLite.Performance */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = OSQLite.Performance; sourceTree = BUILT_PRODUCTS_DIR; };
+		B04CC8431B71A6A200AA2372 /* OSQLiteTest.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = OSQLiteTest.cpp; sourceTree = "<group>"; };
+		B04CC84C1B723D0C00AA2372 /* OSQLite.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = OSQLite.cpp; sourceTree = "<group>"; };
+		B04CC84D1B723D0C00AA2372 /* OSQLite.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = OSQLite.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
 		B04CC8191B63BCDC00AA2372 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		B04CC83E1B71A6A200AA2372 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -48,6 +72,7 @@
 			isa = PBXGroup;
 			children = (
 				B04CC81D1B63BCDC00AA2372 /* OSQLite.Safety */,
+				B04CC8421B71A6A200AA2372 /* OSQLite.Performance */,
 				B04CC8281B63BD1D00AA2372 /* SQLite */,
 				B04CC80F1B63BCC700AA2372 /* Products */,
 			);
@@ -57,6 +82,7 @@
 			isa = PBXGroup;
 			children = (
 				B04CC81C1B63BCDC00AA2372 /* OSQLite.Safety */,
+				B04CC8411B71A6A200AA2372 /* OSQLite.Performance */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -64,6 +90,7 @@
 		B04CC81D1B63BCDC00AA2372 /* OSQLite.Safety */ = {
 			isa = PBXGroup;
 			children = (
+				B04CC8301B70F25100AA2372 /* InterfacesDisplay.h */,
 				B04CC82D1B63BD5D00AA2372 /* OSQLite.h */,
 				B04CC82C1B63BD5D00AA2372 /* OSQLite.inl */,
 				B04CC81E1B63BCDC00AA2372 /* OSQLiteTest.cpp */,
@@ -78,6 +105,16 @@
 				B04CC82A1B63BD2F00AA2372 /* sqlite3.h */,
 			);
 			name = SQLite;
+			sourceTree = "<group>";
+		};
+		B04CC8421B71A6A200AA2372 /* OSQLite.Performance */ = {
+			isa = PBXGroup;
+			children = (
+				B04CC84D1B723D0C00AA2372 /* OSQLite.h */,
+				B04CC84C1B723D0C00AA2372 /* OSQLite.cpp */,
+				B04CC8431B71A6A200AA2372 /* OSQLiteTest.cpp */,
+			);
+			path = OSQLite.Performance;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -100,6 +137,23 @@
 			productReference = B04CC81C1B63BCDC00AA2372 /* OSQLite.Safety */;
 			productType = "com.apple.product-type.tool";
 		};
+		B04CC8401B71A6A200AA2372 /* OSQLite.Performance */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = B04CC8451B71A6A200AA2372 /* Build configuration list for PBXNativeTarget "OSQLite.Performance" */;
+			buildPhases = (
+				B04CC83D1B71A6A200AA2372 /* Sources */,
+				B04CC83E1B71A6A200AA2372 /* Frameworks */,
+				B04CC83F1B71A6A200AA2372 /* CopyFiles */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = OSQLite.Performance;
+			productName = OSQLite.Performance;
+			productReference = B04CC8411B71A6A200AA2372 /* OSQLite.Performance */;
+			productType = "com.apple.product-type.tool";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -110,6 +164,9 @@
 				ORGANIZATIONNAME = "Steven Chang";
 				TargetAttributes = {
 					B04CC81B1B63BCDC00AA2372 = {
+						CreatedOnToolsVersion = 6.4;
+					};
+					B04CC8401B71A6A200AA2372 = {
 						CreatedOnToolsVersion = 6.4;
 					};
 				};
@@ -127,6 +184,7 @@
 			projectRoot = "";
 			targets = (
 				B04CC81B1B63BCDC00AA2372 /* OSQLite.Safety */,
+				B04CC8401B71A6A200AA2372 /* OSQLite.Performance */,
 			);
 		};
 /* End PBXProject section */
@@ -139,6 +197,16 @@
 				B04CC82E1B63BD5D00AA2372 /* OSQLite.inl in Sources */,
 				B04CC82B1B63BD2F00AA2372 /* sqlite3.c in Sources */,
 				B04CC81F1B63BCDC00AA2372 /* OSQLiteTest.cpp in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		B04CC83D1B71A6A200AA2372 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				B04CC84B1B71C4B300AA2372 /* sqlite3.c in Sources */,
+				B04CC8441B71A6A200AA2372 /* OSQLiteTest.cpp in Sources */,
+				B04CC84E1B723D0C00AA2372 /* OSQLite.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -250,6 +318,24 @@
 			};
 			name = Release;
 		};
+		B04CC8461B71A6A200AA2372 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Debug;
+		};
+		B04CC8471B71A6A200AA2372 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -267,6 +353,15 @@
 			buildConfigurations = (
 				B04CC8211B63BCDC00AA2372 /* Debug */,
 				B04CC8221B63BCDC00AA2372 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		B04CC8451B71A6A200AA2372 /* Build configuration list for PBXNativeTarget "OSQLite.Performance" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				B04CC8461B71A6A200AA2372 /* Debug */,
+				B04CC8471B71A6A200AA2372 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

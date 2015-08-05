@@ -10,7 +10,7 @@
 
 // Pre-defines
 #define TEST_SUCCESS(func_name) std::cout<<">> "<<#func_name<<"... SUCCESS"<<std::endl
-#define TEST_FAIL(func_name) std::cout<<">> "<<#func_name<<"... FAIL!!!"<<std::endl
+#define TEST_FAIL(func_name) std::cout<<"!! "<<#func_name<<"... FAIL!!!"<<std::endl
 #ifdef _MSC_VER
 std::string databaseFilePath = "c://software/sqlite3/sqlitedb";
 #else
@@ -116,27 +116,43 @@ try {
     std::cout << "ERROR: " << e.what() << std::endl;
     TEST_FAIL(executeScalar);
 }
+    
+// Test: check OSStatement transactions interface
+void test_OSStatement_transactions()
+try {
+    using namespace OSQLite;
+    OSDatabase _database(databaseFilePath);
+    OSStatement _statement(_database);
+    _statement.execute("create table if not exists Person(id integer not null, name varchar(56), address text, primary key(id))");
+    _statement.execute("insert into Person(id, name, address) values(1, 'steven', 'shanghai')");
+        
+    _statement.begin();
+    try {
+        _statement.execute("insert into Person(id, name, address) values(1, 'steven', 'shanghai')");
+        _statement.commit();
+    } catch (const OSException&) {
+        _statement.rollback();
+    }
+    
+    _statement.execute("drop table Person");
+        
+    TEST_SUCCESS(transactions);
+} catch (const OSQLite::OSException& e) {
+    std::cout << "ERROR: " << e.what() << std::endl;
+    TEST_FAIL(transactions);
+}
 
 
-// Sample class displaying how to use OSQuery and OSTablePolicy
+// Sample class displaying how to use OSQuery and OSTablePolicy.
 // You just need to inherit OSTablePolicy class, and bind table name, primary
 // key (there must be one) and other keys. Then you must call those binding
 // functions at least once. After that, you can call the functions defined
 // in OSQuery (save, saveOrUpdate, update, deleteObject) freely.
 class Person : virtual public OSQLite::OSTablePolicy<Person> {
 public:
-    Person(int& id, const std::string& name, const std::string& address):_id(id), _name(name), _address(address) {bind();}
+    Person(int& id, const std::string& name, const std::string& address):_id(id), _name(name), _address(address), OSTablePolicy("Person", {"id", "name", "address"}, _id, _name, _address) {}
     virtual ~Person() {}
-    
-    void bind() {
-        // Bindings are displayed as below. In the database there is a table named
-        // Person with id, name and address.
-        bind_table_name("Person");
-        bind_primary_key("id", _id);
-        bind_key("name", _name);
-        bind_key("address", _address);
-    }
-    
+        
     // parameters should not have cv specifiers, and they should not be a reference
     // or a pointer. But they can be privite or public, as you like.
     int _id;
@@ -339,25 +355,28 @@ try {
     std::cout << "ERROR: " << e.what() << std::endl;
     TEST_FAIL(deleteObject);
 }
-    
 
 int main(int argc, const char * argv[]) {
-    
-    std::cout << "Test... OSDatabase" << std::endl;
-    test_OSDatabase_ctors_dtors();
-    
-    std::cout << "Test... OSStatement" << std::endl;
-    test_OSStatement_execute();
-    test_OSStatement_executeRows();
-    test_OSStatement_executeScalar();
-    
-    std::cout << "Test... OSQuery and OSTablePolicy tests" << std::endl;
-    test_OSQuery_save();
-    test_OSQuery_exists();
-    test_OSQuery_fill();
-    test_OSQuery_update();
-    test_OSQuery_saveOrUpdate();
-    test_OSQuery_deleteObject();
-    
+
+	// On my Macbook:
+	// Performance: 1000 test suite loops, 11000 open&close ops, 50000 sql access->21.775s
+
+	std::cout << "Test... OSDatabase" << std::endl;
+	test_OSDatabase_ctors_dtors();
+
+	std::cout << "Test... OSStatement" << std::endl;
+	test_OSStatement_execute();
+	test_OSStatement_executeRows();
+	test_OSStatement_executeScalar();
+	test_OSStatement_transactions();
+
+	std::cout << "Test... OSQuery and OSTablePolicy tests" << std::endl;
+	test_OSQuery_save();
+	test_OSQuery_exists();
+	test_OSQuery_fill();
+	test_OSQuery_update();
+	test_OSQuery_saveOrUpdate();
+	test_OSQuery_deleteObject();
+
     return 0;
 }

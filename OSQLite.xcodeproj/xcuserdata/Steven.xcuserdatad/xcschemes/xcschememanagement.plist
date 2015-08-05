@@ -4,6 +4,16 @@
 <dict>
 	<key>SchemeUserState</key>
 	<dict>
+		<key>OSLite.Performance.xcscheme</key>
+		<dict>
+			<key>orderHint</key>
+			<integer>2</integer>
+		</dict>
+		<key>OSQLite.Performance.xcscheme</key>
+		<dict>
+			<key>orderHint</key>
+			<integer>3</integer>
+		</dict>
 		<key>OSQLite.Safety.xcscheme</key>
 		<dict>
 			<key>orderHint</key>
@@ -23,6 +33,16 @@
 			<true/>
 		</dict>
 		<key>B04CC81B1B63BCDC00AA2372</key>
+		<dict>
+			<key>primary</key>
+			<true/>
+		</dict>
+		<key>B04CC8351B71A67E00AA2372</key>
+		<dict>
+			<key>primary</key>
+			<true/>
+		</dict>
+		<key>B04CC8401B71A6A200AA2372</key>
 		<dict>
 			<key>primary</key>
 			<true/>
